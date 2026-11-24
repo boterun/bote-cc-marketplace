@@ -1,0 +1,12 @@
+{
+  "name": "bote-cc-marketplace",
+  "owner": {
+    "name": "boterun"
+  },
+  "metadata": {
+    "description": "Personal Claude Code plugins by boterun",
+    "version": "0.1.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": []
+}
