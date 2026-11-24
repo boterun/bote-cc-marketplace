@@ -1,5 +1,7 @@
 import { expect, test } from 'claude-code/testing'
 
+import { parseArgs } from '../hooks/register'
+
 const BAND = {
   plugin: 'copy-cmd',
   component: 'AbovePrompt',
@@ -61,11 +63,20 @@ test('the band offers each shell command and copies it', async ($, on) => {
     // The tree and the JSON are not commands.
     expect(await ui.find({ key: 'copy:2' })).toBeUndefined()
 
-    await ui.press({ key: 'copy:1' })
+    await ui.press({ key: 'copy:0' })
+    await ui.press({ key: 'shell:0' })
+    await ui.press({ key: 'shell:1' })
     await ui.unmount()
   }
 
-  expect(copied).toEqual(['git status\ngit push', 'git status\ngit push'])
+  const once = [
+    // [copy] drops the `!` the reply wrote; [!copy] puts one back.
+    'gh auth refresh -s workflow',
+    '! gh auth refresh -s workflow',
+    // A multi-line command keeps every line after the one `!`.
+    '! git status\ngit push',
+  ]
+  expect(copied).toEqual([...once, ...once])
 })
 
 test('a reply with no commands draws no row', async ($, on) => {
@@ -86,4 +97,12 @@ test("a subagent's answer leaves the band alone", async ($, on) => {
 
   expect(await ui.find({ key: 'copy:0' })).toBeUndefined()
   await ui.unmount()
+})
+
+test('/copy-cmd reads a number and an optional !', () => {
+  expect(parseArgs('')).toEqual({ n: 1, isShellMode: false })
+  expect(parseArgs('2')).toEqual({ n: 2, isShellMode: false })
+  expect(parseArgs('!2')).toEqual({ n: 2, isShellMode: true })
+  expect(parseArgs(' ! 3 ')).toEqual({ n: 3, isShellMode: true })
+  expect(parseArgs('!')).toEqual({ n: 1, isShellMode: true })
 })

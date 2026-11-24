@@ -1,14 +1,18 @@
 # copy-cmd
 
-A Claude Code mod that puts a `[copy]` button above the prompt for each shell
+A Claude Code mod that puts copy buttons above the prompt for each shell
 command in Claude's last reply, so you can copy a command with one click
 instead of selecting it by hand.
 
 ```
-Click [copy], or ctrl+x tab then 1-9
-1: [copy] gh auth refresh -s workflow
-2: [copy] git status (+1 lines)
+[copy] for a terminal, [!copy] for Claude Code's shell mode · or ctrl+x tab then 1-9 / a-i
+1: [copy] a: [!copy] gh auth refresh -s workflow
+2: [copy] b: [!copy] git status (+1 lines)
 ```
+
+- `[copy]` copies the command alone, for pasting into a terminal.
+- `[!copy]` copies it with a leading `! `, for pasting into Claude Code's prompt
+  to run it in shell mode.
 
 ## Install
 
@@ -26,9 +30,9 @@ When a reply finishes, the row above the prompt lists its shell commands
 
 | How | Works when |
 | --- | --- |
-| Click `[copy]` | Fullscreen renderer **and** mouse enabled (see Requirements) |
-| `ctrl+x` `tab`, then `1`–`9` | Always |
-| `/copy-cmd [n]` (default `1`) | Always |
+| Click `[copy]` / `[!copy]` | Fullscreen renderer **and** mouse enabled (see Requirements) |
+| `ctrl+x` `tab`, then `1`–`9` (`[copy]`) or `a`–`i` (`[!copy]`) | Always |
+| `/copy-cmd [n]` (default `1`); `/copy-cmd !n` for shell mode | Always |
 
 A toast says `Copied: ...` or `Copy failed (<reason>)`.
 
@@ -37,8 +41,13 @@ A toast says `Copied: ...` or `Copy failed (<reason>)`.
 - Fenced blocks tagged `bash`, `sh`, `shell`, `zsh`, `fish`, `console`,
   `terminal`, `powershell`, `pwsh`, `ps1`, `cmd` or `bat`.
 - Untagged fenced blocks, unless they look like a file tree, JSON or markup.
-- A leading `$ ` prompt is removed from each line. A leading `!` (Claude Code's
-  shell prefix) is kept, so the command can be pasted straight into the prompt.
+- A leading `$ ` prompt is removed from each line, and a leading `!` (Claude
+  Code's shell prefix) from the command: `[copy]` leaves it off, `[!copy]`
+  puts exactly one back.
+- For a multi-line command, `[!copy]` puts the `!` before the first line only
+  and copies every line after it, so the whole block is one shell-mode input.
+  Verified: pasting `! echo "line 1"` + newline + `echo "line 2"` into the
+  prompt runs both lines.
 - Only the main conversation's last reply is used; subagents' answers are ignored.
 
 ## Requirements and known constraints

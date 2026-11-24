@@ -1,6 +1,6 @@
 {
   "name": "copy-cmd",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Buttons above the prompt that copy the shell commands from Claude's last reply",
   "author": { "name": "boterun" },
   "homepage": "https://github.com/boterun/bote-cc-marketplace/tree/main/plugins/copy-cmd",

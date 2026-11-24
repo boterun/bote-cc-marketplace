@@ -1,9 +1,10 @@
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
 
-// The shell commands found in Claude's last main-loop reply, in order.
+// The shell commands found in Claude's last main-loop reply, in order, stored
+// without Claude Code's `!` prefix: [!copy] adds it, [copy] leaves it off.
 const commands = atom({ plugin: 'copy-cmd', key: 'commands' } as const, [], {
-  shape: 'commands-1',
+  shape: 'commands-2',
 })
 
 const SHELL_LANGS = new Set([
@@ -21,8 +22,9 @@ const SHELL_LANGS = new Set([
   'bat',
 ])
 
-// Digits 1-9 are the band's hotkeys, so at most nine buttons.
+// Digits 1-9 press [copy] and letters a-i press [!copy], so at most nine rows.
 const MAX_BUTTONS = 9
+const LETTERS = 'abcdefghi'
 
 const FENCE = /^(`{3,}|~{3,})[ \t]*([^\s`]*)[^\n]*\n([\s\S]*?)\n[ \t]*\1[ \t]*$/gm
 
@@ -33,13 +35,15 @@ function looksLikeCommand(body: string): boolean {
   return !/^[{[<]/.test(first) && !/[├└│]/.test(body)
 }
 
-// `$ ` prompts (as in a `console` block) are not part of the command.
+// `$ ` prompts (as in a `console` block) are not part of the command, and
+// neither is a leading `!` (Claude Code's shell mode).
 function stripPrompts(body: string): string {
   return body
     .split('\n')
     .map(line => line.replace(/^\s*\$ /, ''))
     .join('\n')
     .trim()
+    .replace(/^!\s*/, '')
 }
 
 export function extractCommands(markdown: string): string[] {
@@ -59,6 +63,12 @@ export function extractCommands(markdown: string): string[] {
   return found
 }
 
+// What to paste into Claude Code's prompt to run the command in shell mode:
+// one `!` in front, the whole command (every line) after it.
+export function forShellMode(command: string): string {
+  return `! ${command}`
+}
+
 function preview(command: string, width: number): string {
   const lines = command.split('\n')
   const more = lines.length > 1 ? ` (+${lines.length - 1} lines)` : ''
@@ -69,12 +79,26 @@ function preview(command: string, width: number): string {
   return `${cut}${more}`
 }
 
+function told(text: string, failure: string | undefined, width: number): string {
+  return failure === undefined ? `Copied: ${preview(text, width)}` : `Copy failed (${failure})`
+}
+
+// `/copy-cmd`, `/copy-cmd 2`, `/copy-cmd !2` or `/copy-cmd ! 2`.
+export function parseArgs(args: string): { n: number; isShellMode: boolean } {
+  const trimmed = args.trim()
+  const isShellMode = trimmed.startsWith('!')
+  const rest = trimmed.replace(/^!\s*/, '')
+
+  return { n: rest === '' ? 1 : Number.parseInt(rest, 10), isShellMode }
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
       name: 'copy-cmd',
-      description: 'Copy a shell command from the last reply (number, default 1)',
-      argumentHint: '[n]',
+      description:
+        "Copy a shell command from the last reply; put ! before the number for Claude Code's shell mode",
+      argumentHint: '[!][n]',
     })
 
     return next(e)
@@ -92,8 +116,7 @@ export const register: Register = on => {
 
   on('command.run', { command: 'copy-cmd' }, async ($, e) => {
     const list = await read($, commands)
-    const arg = e.args.trim()
-    const n = arg === '' ? 1 : Number.parseInt(arg, 10)
+    const { n, isShellMode } = parseArgs(e.args)
     const command = list[n - 1]
 
     if (list.length === 0) {
@@ -103,13 +126,10 @@ export const register: Register = on => {
       return { text: `Pick a number from 1 to ${list.length}.` }
     }
 
-    const result = await $.ui.copy({ text: command })
+    const text = isShellMode ? forShellMode(command) : command
+    const result = await $.ui.copy({ text })
 
-    return {
-      text: result.isCopied
-        ? `Copied: ${preview(command, 60)}`
-        : `Copy failed (${result.reason})`,
-    }
+    return { text: told(text, result.isCopied ? undefined : result.reason, 60) }
   })
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
@@ -120,12 +140,15 @@ export const register: Register = on => {
     }
 
     const { Box, Button, Text } = $.ui.resolve(e)
-    // "1: [copy] " is 10 cells.
-    const width = e.props.bodyColumns - 11
+    // "1: [copy] a: [!copy] " is 21 cells.
+    const width = e.props.bodyColumns - 22
 
     return (
       <Box flexDirection="column">
-        <Text dimColor>Click [copy], or ctrl+x tab then 1-9</Text>
+        <Text dimColor>
+          [copy] for a terminal, [!copy] for Claude Code's shell mode · or ctrl+x tab
+          then 1-9 / a-i
+        </Text>
         {list.slice(0, MAX_BUTTONS).map((command, i) => (
           <Box key={`row:${i}`} flexDirection="row">
             <Button
@@ -136,15 +159,28 @@ export const register: Register = on => {
               hover={{ underline: true }}
               onPress={async press => {
                 const result = await $.ui.copy({ text: command, surface: press.surface })
-                $.ui.toast(
-                  result.isCopied
-                    ? `Copied: ${preview(command, 40)}`
-                    : `Copy failed (${result.reason})`,
-                )
+                $.ui.toast(told(command, result.isCopied ? undefined : result.reason, 40))
               }}
             >
               <Text color="suggestion" bold>
                 [copy]
+              </Text>
+            </Button>
+            <Text> </Text>
+            <Button
+              key={`shell:${i}`}
+              hotkey={LETTERS[i]}
+              plain
+              label="[!copy]"
+              hover={{ underline: true }}
+              onPress={async press => {
+                const text = forShellMode(command)
+                const result = await $.ui.copy({ text, surface: press.surface })
+                $.ui.toast(told(text, result.isCopied ? undefined : result.reason, 40))
+              }}
+            >
+              <Text color="bashBorder" bold>
+                [!copy]
               </Text>
             </Button>
             <Text> {preview(command, width)}</Text>
