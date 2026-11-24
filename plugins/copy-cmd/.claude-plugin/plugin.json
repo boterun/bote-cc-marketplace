@@ -1,0 +1,11 @@
+{
+  "name": "copy-cmd",
+  "version": "0.1.0",
+  "description": "Buttons above the prompt that copy the shell commands from Claude's last reply",
+  "author": { "name": "boterun" },
+  "homepage": "https://github.com/boterun/bote-cc-marketplace/tree/main/plugins/copy-cmd",
+  "repository": "https://github.com/boterun/bote-cc-marketplace",
+  "license": "MIT",
+  "keywords": ["clipboard", "shell", "copy", "mod"],
+  "types": "./types/index.d.ts"
+}

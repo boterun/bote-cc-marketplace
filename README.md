@@ -1,33 +1,46 @@
 # bote-cc-marketplace
 
-個人用の Claude Code プラグインマーケットプレイス。
+A personal Claude Code plugin marketplace.
 
-## 使い方
+## Use it
 
 ```
 /plugin marketplace add boterun/bote-cc-marketplace
 /plugin install <plugin-name>@bote-cc-marketplace
 ```
 
-## プラグインの追加
+## Plugins
 
-1. `plugins/<plugin-name>/` を作り、`.claude-plugin/plugin.json` と `commands/` `skills/` `agents/` `hooks/` など必要なものを置く
-2. `.claude-plugin/marketplace.json` の `plugins` に追記する
+| Plugin | Description |
+| --- | --- |
+| [copy-cmd](./plugins/copy-cmd) | Buttons above the prompt that copy the shell commands from Claude's last reply |
 
-```json
-{
-  "name": "<plugin-name>",
-  "source": "./plugins/<plugin-name>",
-  "description": "..."
-}
-```
+## Adding a plugin
 
-3. `claude plugin validate .` で検証する
+1. Create `plugins/<plugin-name>/` with `.claude-plugin/plugin.json` and whatever
+   it needs (`commands/`, `skills/`, `agents/`, `hooks/`, a `README.md`).
+2. Add an entry to `plugins` in `.claude-plugin/marketplace.json`:
 
-## 構成
+   ```json
+   {
+     "name": "<plugin-name>",
+     "source": "./plugins/<plugin-name>",
+     "description": "..."
+   }
+   ```
+
+3. Validate with `claude plugin validate .` and `claude plugin validate plugins/<plugin-name>`.
+
+Everything published here is written in English.
+
+## Layout
 
 ```
 .claude-plugin/
-  marketplace.json   # マーケットプレイスの定義
-plugins/             # 各プラグインを置く場所
+  marketplace.json   # marketplace definition
+plugins/             # one folder per plugin
 ```
+
+## License
+
+MIT
